@@ -1,0 +1,53 @@
+# Singularity def file for adding aditional python and R packages to Eva's sc_multi_omic-tidyverse_4.1.2 docker image 
+
+Bootstrap: docker
+From: evahamrud/sc_multi_omic-tidyverse_4.1.2:latest
+
+%labels
+    authors "eva.hamrud@crick.ac.uk"
+    description "Singularity image with R4.1.2, MACS2, and ArchR"
+
+%post
+    # Update the system and install dependencies
+    apt-get update && apt-get install -y \
+        wget \
+        build-essential \
+        libcurl4-gnutls-dev \
+        libxml2-dev \
+        libssl-dev \
+        libz-dev \
+        libglpk40 \
+        python3 \
+        python3-pip \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install MACS2 using pip
+    pip3 install MACS2
+
+    # Install ArchR
+    R -e "devtools::install_github('GreenleafLab/ArchR', ref='master', repos = BiocManager::repositories())"
+
+    # Install ArchR dependencies
+    R -e "ArchR::installExtraPackages()"
+
+    # Install hexbin to fix ArchR feature plot bug
+    R -e "install.packages('hexbin')"
+
+    # Install GenomicFeatures for annotation
+    R -e "BiocManager::install('GenomicFeatures')"
+
+    # Install OrgDb package
+    R -e "if (!requireNamespace('org.Gg.eg.db', quietly = TRUE)){BiocManager::install('org.Gg.eg.db')}"
+
+    # Install UCSC genome package (BSgenome.Ggallus.UCSC.galGal6)
+    R -e "if (!requireNamespace('BSgenome.Ggallus.UCSC.galGal6', quietly = TRUE)){BiocManager::install('BSgenome.Ggallus.UCSC.galGal6')}"
+
+    # Install additional R packages
+    R -e "install.packages(c('gridExtra', 'getopt', 'optparse', 'pheatmap', 'patchwork', 'future', 'future.apply', 'clustree'))"
+
+%environment
+    # Set environment variables if needed
+    export PATH="/usr/local/bin:$PATH"
+
+%help
+This Singularity container includes R4.1.2, MACS2, ArchR, and various R packages for genomic analysis.

@@ -1,0 +1,93 @@
+# Singularity definition file to host shiny server from (https://github.com/vsoch/singularity-shiny/blob/master/README.md)
+# 10/12/2024
+
+Bootstrap: docker
+From: rocker/shiny:4.3
+
+%environment
+    # Set environment variables
+    TZ=UTC
+    DEBIAN_FRONTEND=noninteractive
+
+%post
+
+   export TZ=UTC
+   export DEBIAN_FRONTEND=noninteractive
+   mkdir -p /var/log/shiny-server
+   chown shiny.shiny /var/log/shiny-server
+   
+# Update and install system dependencies
+    apt-get update && apt-get install -y \
+    	locales-all \
+    	apt-utils \
+    	dialog \
+        build-essential \
+        python3-dev \
+        libcurl4-gnutls-dev \
+        libxml2-dev \
+        libssl-dev \
+        libfontconfig1-dev \
+        libhdf5-dev \
+        libhdf5-serial-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libtiff-dev \
+        libgit2-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libgsl-dev \
+        libcairo2-dev \
+        libbz2-dev \
+        libglpk-dev \
+        software-properties-common \
+        wget \
+        git \
+        ca-certificates \
+        gdebi-core 
+        
+# Install Macs for peak calling
+    wget https://bootstrap.pypa.io/get-pip.py
+    python3 get-pip.py
+    pip install macs3
+
+# Install RStudio Server
+    wget https://download2.rstudio.org/server/jammy/amd64/rstudio-server-2024.04.2-764-amd64.deb
+    gdebi --n rstudio-server-2024.04.2-764-amd64.deb
+    rm rstudio-server-2024.04.2-764-amd64.deb
+    
+    # Install RStudio Desktop
+    wget https://download1.rstudio.org/electron/jammy/amd64/rstudio-2024.04.1-748-amd64.deb
+    gdebi --n rstudio-2024.04.1-748-amd64.deb
+    rm rstudio-2024.04.1-748-amd64.deb
+
+# Install R packages including ArchR, Seurat, and additional dependencies
+    R -e 'install.packages("mgcv")'
+    R -e 'install.packages("devtools")'
+    R -e 'install.packages("BiocManager")'
+    R -e 'devtools::install_github("GreenleafLab/ArchR", ref="master", repos = BiocManager::repositories())'
+    R -e 'install.packages("shinythemes")'
+    R -e 'install.packages("bs4Dash")'
+    R -e 'install.packages("data.table")'
+    R -e 'install.packages("tidyverse")'
+    R -e 'install.packages("ComplexHeatmap")'
+    R -e 'install.packages("viridis")'
+    R -e 'devtools::install_github("andrewsali/shinycssloaders")'
+    R -e 'devtools::install_github("thomasp85/patchwork")'
+    R -e 'devtools::install_github("alexthiery/scHelper")'
+    R -e 'install.packages("Cairo")'
+    R -e 'install.packages("XML")'
+    R -e 'install.packages("Seurat")'
+    R -e 'BiocManager::install("JASPAR2020")'
+
+    # Clean up
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+%environment
+    export PATH=/usr/local/bin/R:$PATH
+    
+%files
+    /home/jake/Singularity_scripts/pam-helper.sh /usr/lib/rstudio-server/bin/pam-helper
+
+%runscript
+   exec shiny-server 2>&1
